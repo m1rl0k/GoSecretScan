@@ -13,7 +13,24 @@ var secretPatterns = []string{
 	`(?i)aws_secret_access_key\s*=\s*"(.+)"`,
 	`(?i)api_key\s*=\s*"(.+)"`,
 	`(?i)password\s*=\s*"(.+)"`,
+	`(?i)azure_client_id\s*=\s*"(.+)"`,
+	`(?i)azure_client_secret\s*=\s*"(.+)"`,
+	`(?i)azure_tenant_id\s*=\s*"(.+)"`,
+	`(?i)azure_subscription_id\s*=\s*"(.+)"`,
+	`(?i)google_application_credentials\s*=\s*"(.+)"`,
+	`(?i)google_client_id\s*=\s*"(.+)"`,
+	`(?i)google_client_secret\s*=\s*"(.+)"`,
+	`(?i)google_project\s*=\s*"(.+)"`,
+	`(?i)google_credentials\s*=\s*"(.+)"`,
+	`(?i)private_key(?:_id)?\s*=\s*"(.+)"`,
+	`(?i)client_email\s*=\s*"(.+)"`,
+	`(?i)client_id\s*=\s*"(.+)"`,
+	`(?i)client_secret\s*=\s*"(.+)"`,
+	`(?i)client_x509_cert_url\s*=\s*"(.+)"`,
+	`(?i)token_uri\s*=\s*"(.+)"`,
+	`(?i)auth_uri\s*=\s*"(.+)"`,
 }
+
 
 type Secret struct {
 	File       string
