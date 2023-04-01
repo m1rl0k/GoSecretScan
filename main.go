@@ -64,10 +64,14 @@ func main() {
 		fmt.Println("Error walking the directory:", err)
 	}
 
-	// Format and print the results
-	fmt.Println("Secrets found:")
-	for _, secret := range secretsFound {
-		fmt.Printf("File: %s\nLine Number: %d\nLine: %s\n\n", secret.File, secret.LineNumber, secret.Line)
+	if len(secretsFound) > 0 {
+		fmt.Println("Secrets found:")
+		for _, secret := range secretsFound {
+			fmt.Printf("File: %s\nLine Number: %d\nLine: %s\n\n", secret.File, secret.LineNumber, secret.Line)
+		}
+		os.Exit(1) // Exit with a non-zero exit code, indicating a failure
+	} else {
+		fmt.Println("No secrets found.")
 	}
 }
 
@@ -103,18 +107,4 @@ func scanFileForSecrets(path string) ([]Secret, error) {
 	}
 
 	return secrets, nil
-}
-	if err != nil {
-		fmt.Println("Error walking the directory:", err)
-	}
-
-	if len(secretsFound) > 0 {
-		fmt.Println("Secrets found:")
-		for _, secret := range secretsFound {
-			fmt.Printf("File: %s\nLine Number: %d\nLine: %s\n\n", secret.File, secret.LineNumber, secret.Line)
-		}
-		os.Exit(1) // Exit with a non-zero exit code, indicating a failure
-	} else {
-		fmt.Println("No secrets found.")
-	}
 }
