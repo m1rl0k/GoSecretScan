@@ -8,16 +8,6 @@ import (
 	"regexp"
 )
 
-package main
-
-import (
-	"bufio"
-	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
-)
-
 var secretPatterns = []string{
 	`(?i)aws_access_key_id\s*=\s*"(.+)"`,
 	`(?i)aws_secret_access_key\s*=\s*"(.+)"`,
