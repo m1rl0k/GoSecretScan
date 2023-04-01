@@ -104,3 +104,13 @@ func scanFileForSecrets(path string) ([]Secret, error) {
 
 	return secrets, nil
 }
+    if len(secretsFound) > 0 {
+        fmt.Println("Secrets found:")
+        for _, secret := range secretsFound {
+            fmt.Printf("File: %s\nLine Number: %d\nLine: %s\n\n", secret.File, secret.LineNumber, secret.Line)
+        }
+        os.Exit(1) // Exit with a non-zero exit code, indicating a failure
+    } else {
+        fmt.Println("No secrets found.")
+    }
+}
