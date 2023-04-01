@@ -15,24 +15,33 @@ var secretPatterns = []string{
 	`(?i)password\s*=\s*"(.+)"`,
 }
 
+type Secret struct {
+	File       string
+	LineNumber int
+	Line       string
+}
+
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Println("Usage: go run main.go <directory_path>")
+	// Get the current working directory
+	dir, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current working directory:", err)
 		os.Exit(1)
 	}
 
-	dir := os.Args[1]
+	var secretsFound []Secret
 
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if !info.IsDir() && (filepath.Ext(path) == ".tf" || filepath.Ext(path) == ".txt") {
-			err := scanFileForSecrets(path)
+			secrets, err := scanFileForSecrets(path)
 			if err != nil {
 				fmt.Println("Error scanning file:", err)
 			}
+			secretsFound = append(secretsFound, secrets...)
 		}
 		return nil
 	})
@@ -40,17 +49,24 @@ func main() {
 	if err != nil {
 		fmt.Println("Error walking the directory:", err)
 	}
+
+	// Format and print the results
+	fmt.Println("Secrets found:")
+	for _, secret := range secretsFound {
+		fmt.Printf("File: %s\nLine Number: %d\nLine: %s\n\n", secret.File, secret.LineNumber, secret.Line)
+	}
 }
 
-func scanFileForSecrets(path string) error {
+func scanFileForSecrets(path string) ([]Secret, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	lineNumber := 1
+	var secrets []Secret
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -58,15 +74,19 @@ func scanFileForSecrets(path string) error {
 			re := regexp.MustCompile(pattern)
 			match := re.FindStringSubmatch(line)
 			if len(match) > 0 {
-				fmt.Printf("Secret found in file %s at line %d: %s\n", path, lineNumber, line)
+				secrets = append(secrets, Secret{
+					File:       path,
+					LineNumber: lineNumber,
+					Line:       line,
+				})
 			}
 		}
 		lineNumber++
 	}
 
 	if err := scanner.Err(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return secrets, nil
 }
