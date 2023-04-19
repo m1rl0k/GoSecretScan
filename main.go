@@ -35,7 +35,7 @@ var secretPatterns = []string{
 	`(?i)client_x509_cert_url\s*=\s*"(https://[a-z0-9\-]+\.googleusercontent\.com/[^"']{1,200})"`,
 	`(?i)token_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/token)"`,
 	`(?i)auth_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/auth)"`,
-}
+} AdditionalSecretPatterns()...)
 type Secret struct {
 	File       string
 	LineNumber int
