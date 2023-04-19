@@ -63,10 +63,7 @@ func main() {
 		if !info.IsDir() && !shouldIgnore(path) {
 			jobs <- path
 		}
-                fmt.Println("Ignored files:")
-                for _, path := range pathsIgnored {
-                fmt.Println(path)
-}
+
 
 		return nil
 	})
