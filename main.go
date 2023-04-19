@@ -100,16 +100,13 @@ func main() {
 func shouldIgnore(path string) bool {
     ignorePatterns := []string{
         
-        `^vendor`,              // Vendor directories
         `^node_modules`,        // Node.js modules directory
         `^\.idea`,              // IntelliJ IDEA project directory
         `^\.vscode`,            // Visual Studio Code project directory
-        `\.log$`,               // Log files
         `\.out$`,               // Binary files
         `\.min\.js$`,           // Minified JavaScript files
         `\.min\.css$`,          // Minified CSS files
         `\.(jpg|jpeg|png|gif|ico)$`,    // Images
-        `\.(pdf|docx?|xlsx?|pptx?)$`,   // Documents
     }
 
     for _, pattern := range ignorePatterns {
