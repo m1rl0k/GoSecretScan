@@ -1,6 +1,3 @@
-
-
-
 package main
 
 import (
@@ -48,6 +45,48 @@ type Secret struct {
 type SecretScanner struct {
 	patterns []*regexp.Regexp
 }
+func main() {
+	// Define the directory to scan
+	dir := "/path/to/directory"
+
+	// Create the ignore patterns for the directory scanner
+	ignorePatterns := []string{
+		`^node_modules`,        // Node.js modules directory
+		`^\.idea`,              // IntelliJ IDEA project directory
+		`^\.vscode`,            // Visual Studio Code project directory
+		`\.out$`,               // Binary files
+		`\.min\.js$`,           // Minified JavaScript files
+		`\.min\.css$`,          // Minified CSS files
+		`\.(jpg|jpeg|png|gif|ico)$`,    // Images
+	}
+
+	// Create the directory scanner
+	dirScanner, err := NewDirectoryScanner(ignorePatterns)
+	if err != nil {
+		fmt.Println("Error creating directory scanner:", err)
+		return
+	}
+
+	// Create the secret scanner
+	secretScanner, err := NewSecretScanner(secretPatterns)
+	if err != nil {
+		fmt.Println("Error creating secret scanner:", err)
+		return
+	}
+
+	// Scan the directory for secrets
+	secrets, err := dirScanner.ScanDirectory(context.Background(), dir, secretScanner)
+	if err != nil {
+		fmt.Println("Error scanning directory:", err)
+		return
+	}
+
+	// Print the found secrets
+	for _, secret := range secrets {
+		fmt.Printf("%s:%d: %s\n", secret.File, secret.LineNumber, secret.Line)
+	}
+}
+
 
 func NewSecretScanner(patterns []string) (*SecretScanner, error) {
 	compiledPatterns := make([]*regexp.Regexp, 0, len(patterns))
