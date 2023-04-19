@@ -78,7 +78,12 @@ numWorkers := runtime.NumCPU()
 				if err != nil {
 					fmt.Println("Error scanning file:", err)
 				}
-				results <- secrets
+				if len(secrets) > 0 {
+    results <- secrets
+} else {
+    results <- []Secret{}
+}
+
 			}
 		}()
 	}
@@ -104,16 +109,12 @@ numWorkers := runtime.NumCPU()
 
 // Merge the results
 var secretsFound []Secret
-completedJobs := 0
-for {
-    select {
-    case secrets := <-results:
-        secretsFound = append(secretsFound, secrets...)
-        completedJobs++
-    default:
-        if completedJobs == numWorkers {
-            break
-        }
+totalFilesProcessed := 0
+for secrets := range results {
+    secretsFound = append(secretsFound, secrets...)
+    totalFilesProcessed++
+    if totalFilesProcessed == numWorkers {
+        break
     }
 }
 
