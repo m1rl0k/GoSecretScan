@@ -103,11 +103,19 @@ for i := 0; i < numWorkers; i++ {
 	close(jobs)
 	wg.Wait()
 
+
 // Merge the results
 var secretsFound []Secret
+totalFilesProcessed := 0
+
 go func() {
     for secrets := range results {
         secretsFound = append(secretsFound, secrets...)
+        totalFilesProcessed++
+
+        if totalFilesProcessed == len(jobs) {
+            break
+        }
     }
 }()
 
@@ -116,7 +124,8 @@ close(jobs)
 wg.Wait()
 close(results) // Close the results channel after all workers are done
 
-
+// Wait for results goroutine to finish
+time.Sleep(100 * time.Millisecond)
 
 	// Print the results
 	if len(secretsFound) > 0 {
