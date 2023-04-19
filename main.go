@@ -68,24 +68,37 @@ func main() {
 	}
 
 	// Create the secret scanner
-	secretScanner, err := NewSecretScanner(secretPatterns)
+	secretScanner, err := NewSecretScanner()
 	if err != nil {
 		fmt.Println("Error creating secret scanner:", err)
 		return
 	}
 
-	// Scan the directory for secrets
-	secrets, err := dirScanner.ScanDirectory(context.Background(), dir, secretScanner)
-	if err != nil {
-		fmt.Println("Error scanning directory:", err)
-		return
-	}
+	// Start the timer
+	start := time.Now()
 
-	// Print the found secrets
+	// Scan the directory for secrets concurrently
+	secretsChan := make(chan []Secret)
+	go func() {
+		secrets, err := dirScanner.ScanDirectory(context.Background(), dir, secretScanner)
+		if err != nil {
+			fmt.Println("Error scanning directory:", err)
+			return
+		}
+		secretsChan <- secrets
+	}()
+
+	// Wait for the results and print the found secrets
+	secrets := <-secretsChan
 	for _, secret := range secrets {
 		fmt.Printf("%s:%d: %s\n", secret.File, secret.LineNumber, secret.Line)
 	}
+
+	// Calculate and print the elapsed time
+	elapsed := time.Since(start)
+	fmt.Printf("Scanning took %s\n", elapsed)
 }
+
 
 
 func NewSecretScanner(patterns []string) (*SecretScanner, error) {
