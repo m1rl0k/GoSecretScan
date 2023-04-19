@@ -124,7 +124,9 @@ func shouldIgnore(path string) bool {
 
 func getSecretPatterns() []*regexp.Regexp {
 	defaultPatterns := []string{
-		
+
+        `(?i)access_key\s*=\s*"AKIA[0-9A-Z]{16}"`,
+        `(?i)secret_key\s*=\s*"[0-9a-zA-Z/+]{40}"`,	
         `(?i)aws_access_key_id\s*=\s*"AKIA[0-9A-Z]{16}"`,
 	`(?i)aws_secret_access_key\s*=\s*"[0-9a-zA-Z/+]{40}"`,
 	`(?i)api_key(?:\s*[:=]\s*|\s*["'\s])?([a-zA-Z0-9_\-]{32,})`,
