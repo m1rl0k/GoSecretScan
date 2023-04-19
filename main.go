@@ -47,7 +47,7 @@ type SecretScanner struct {
 }
 func main() {
 	// Define the directory to scan
-	dir := "/path/to/directory"
+	dir := "."
 
 	// Create the ignore patterns for the directory scanner
 	ignorePatterns := []string{
