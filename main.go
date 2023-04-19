@@ -10,8 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
-	"sync"
+
 )
 
 type SecretFinder interface {
