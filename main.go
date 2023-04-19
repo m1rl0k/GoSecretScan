@@ -24,7 +24,10 @@ type Secret struct {
 	Line       string
 	Pattern    string
 }
-
+func init() {
+	additionalPatterns := AdditionalSecretPatterns()
+	secretPatterns = append(secretPatterns, additionalPatterns...)
+}
 func main() {
 	// Get the current working directory
 	dir, err := os.Getwd()
