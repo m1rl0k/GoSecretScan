@@ -24,6 +24,26 @@ type Secret struct {
 	Line       string
 	Pattern    string
 }
+var secretPatterns = []string{
+	`(?i)aws_access_key_id\s*=\s*"AKIA[0-9A-Z]{16}"`,
+	`(?i)aws_secret_access_key\s*=\s*"[0-9a-zA-Z/+]{40}"`,
+	`(?i)api_key(?:\s*[:=]\s*|\s*["'\s])?([a-zA-Z0-9_\-]{32,})`,
+	`(?i)password(?:\s*[:=]\s*|\s*["'\s])?([a-zA-Z0-9!@#$%^&*()_+]{8,})`,
+	`(?i)azure_client_(?:id|secret)\s*=\s*"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}"`,
+	`(?i)azure_tenant_id\s*=\s*"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}"`,
+	`(?i)azure_subscription_id\s*=\s*"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}"`,
+	`(?i)google_application_credentials\s*=\s*"([a-zA-Z0-9\-]+\.json)"`,
+	`(?i)google_client_(?:id|secret)\s*=\s*"([0-9]{12}-[a-zA-Z0-9_]{32})"`,
+	`(?i)google_project(?:\s*[:=]\s*|\s*["'\s])?([a-z][a-z0-9-]{4,28}[a-z0-9])`,
+	`(?i)google_credentials(?:\s*[:=]\s*|\s*["'\s])?([a-zA-Z0-9\-]+\.json)"`,
+	`(?i)private_key(?:_id)?\s*=\s*"([0-9a-f]{64})"`,
+	`(?i)client_email\s*=\s*"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Z]{2,})"`,
+	`(?i)client_id\s*=\s*"([0-9]{12}-[a-zA-Z0-9_]{32})"`,
+	`(?i)client_secret\s*=\s*"([a-zA-Z0-9_]{24})"`,
+	`(?i)client_x509_cert_url\s*=\s*"(https://[a-z0-9\-]+\.googleusercontent\.com/[^"']{1,200})"`,
+	`(?i)token_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/token)"`,
+	`(?i)auth_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/auth)"`,
+}
 func init() {
 	additionalPatterns := AdditionalSecretPatterns()
 	secretPatterns = append(secretPatterns, additionalPatterns...)
@@ -124,27 +144,6 @@ func shouldIgnore(path string) bool {
 
 func getSecretPatterns() []*regexp.Regexp {
 	defaultPatterns := []string{
-
-        `(?i)access_key\s*=\s*"AKIA[0-9A-Z]{16}"`,
-        `(?i)secret_key\s*=\s*"[0-9a-zA-Z/+]{40}"`,	
-        `(?i)aws_access_key_id\s*=\s*"AKIA[0-9A-Z]{16}"`,
-	`(?i)aws_secret_access_key\s*=\s*"[0-9a-zA-Z/+]{40}"`,
-	`(?i)api_key(?:\s*[:=]\s*|\s*["'\s])?([a-zA-Z0-9_\-]{32,})`,
-	`(?i)password(?:\s*[:=]\s*|\s*["'\s])?([a-zA-Z0-9!@#$%^&*()_+]{8,})`,
-	`(?i)azure_client_(?:id|secret)\s*=\s*"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}"`,
-	`(?i)azure_tenant_id\s*=\s*"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}"`,
-	`(?i)azure_subscription_id\s*=\s*"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}"`,
-	`(?i)google_application_credentials\s*=\s*"([a-zA-Z0-9\-]+\.json)"`,
-	`(?i)google_client_(?:id|secret)\s*=\s*"([0-9]{12}-[a-zA-Z0-9_]{32})"`,
-	`(?i)google_project(?:\s*[:=]\s*|\s*["'\s])?([a-z][a-z0-9-]{4,28}[a-z0-9])`,
-	`(?i)google_credentials(?:\s*[:=]\s*|\s*["'\s])?([a-zA-Z0-9\-]+\.json)"`,
-	`(?i)private_key(?:_id)?\s*=\s*"([0-9a-f]{64})"`,
-	`(?i)client_email\s*=\s*"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Z]{2,})"`,
-	`(?i)client_id\s*=\s*"([0-9]{12}-[a-zA-Z0-9_]{32})"`,
-	`(?i)client_secret\s*=\s*"([a-zA-Z0-9_]{24})"`,
-	`(?i)client_x509_cert_url\s*=\s*"(https://[a-z0-9\-]+\.googleusercontent\.com/[^"']{1,200})"`,
-	`(?i)token_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/token)"`,
-	`(?i)auth_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/auth)"`,
 
 	}
 	patterns := append(defaultPatterns, AdditionalSecretPatterns()...)
