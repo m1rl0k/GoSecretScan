@@ -156,8 +156,8 @@ func getSecretPatterns() []*regexp.Regexp {
 	return compiledPatterns
 }
 
-func scanFileForSecrets(filePath string, secretPatterns []*regexp.Regexp) ([]map[string]string, error) {
-	var secrets []map[string]string
+func scanFileForSecrets(filePath string, secretPatterns []*regexp.Regexp) ([]Secret, error) {
+	var secrets []Secret
 	file, err := os.Open(filePath)
 	if err != nil {
 		return secrets, err
@@ -169,11 +169,7 @@ func scanFileForSecrets(filePath string, secretPatterns []*regexp.Regexp) ([]map
 		line := scanner.Text()
 		for _, pattern := range secretPatterns {
 			if pattern.MatchString(line) {
-				secret := make(map[string]string)
-				secret["file_path"] = filePath
-				secret["line_number"] = strconv.Itoa(lineNumber)
-				secret["secret_text"] = pattern.FindString(line)
-				secrets = append(secrets, secret)
+				secrets = append(secrets, Secret{filePath, lineNumber, line})
 			}
 		}
 		lineNumber++
@@ -183,7 +179,6 @@ func scanFileForSecrets(filePath string, secretPatterns []*regexp.Regexp) ([]map
 	}
 	return secrets, nil
 }
-
 
 
 func AdditionalSecretPatterns() []string {
@@ -214,23 +209,6 @@ func AdditionalSecretPatterns() []string {
 	}
 	return vulnerabilityPatterns
 }
-func processFiles(jobs <-chan string, results chan<- []Secret, secretPatterns []*regexp.Regexp) {
-    for job := range jobs {
-        secrets, err := scanFileForSecrets(job, secretPatterns)
-        if err != nil {
-            fmt.Println("Error scanning file:", err)
-        }
-        var secretsFound []Secret
-        for _, secret := range secrets {
-            secretsFound = append(secretsFound, Secret{
-                File:       secret["file"],
-                LineNumber: secret["line_number"],
-                Line:       secret["line"],
-                Pattern:    secret["pattern"],
-            })
-        }
-        results <- secretsFound
-    }
-}
+
 
 
