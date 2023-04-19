@@ -102,12 +102,13 @@ numWorkers := runtime.NumCPU()
 	close(jobs)
 	wg.Wait()
 
-	// Merge the results
-	var secretsFound []Secret
-	for i := 0; i < numWorkers; i++ {
-		secrets := <-results
-		secretsFound = append(secretsFound, secrets...)
-	}
+        // Merge the results
+        var secretsFound []Secret
+        for range secretPatterns {
+        secrets := <-results
+        secretsFound = append(secretsFound, secrets...)
+}
+
 
 	// Print the results
 	if len(secretsFound) > 0 {
