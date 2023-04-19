@@ -1,3 +1,6 @@
+
+
+
 package main
 
 import (
@@ -13,13 +16,6 @@ import (
 
 type SecretFinder interface {
 	FindSecrets(context.Context, string) ([]Secret, error)
-}
-
-type Secret struct {
-	File       string
-	LineNumber int
-	Line       string
-	Pattern    string
 }
 var secretPatterns = []string{
         `(?i)aws_access_key_id\s*=\s*"?AKIA[0-9A-Z]{16}"?`,
@@ -43,13 +39,19 @@ var secretPatterns = []string{
 	`(?i)token_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/token)"`,
 	`(?i)auth_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/auth)"`,
 }
+type Secret struct {
+	File       string
+	LineNumber int
+	Line       string
+	Pattern    string
+}
 
 type SecretScanner struct {
 	patterns []*regexp.Regexp
 }
 
 func NewSecretScanner(patterns []string) (*SecretScanner, error) {
-	var compiledPatterns []*regexp.Regexp
+	compiledPatterns := make([]*regexp.Regexp, 0, len(patterns))
 	for _, pattern := range patterns {
 		compiledPattern, err := regexp.Compile(pattern)
 		if err != nil {
@@ -89,7 +91,7 @@ type DirectoryScanner struct {
 }
 
 func NewDirectoryScanner(ignorePatterns []string) (*DirectoryScanner, error) {
-	var compiledPatterns []*regexp.Regexp
+	compiledPatterns := make([]*regexp.Regexp, 0, len(ignorePatterns))
 	for _, pattern := range ignorePatterns {
 		compiledPattern, err := regexp.Compile(pattern)
 		if err != nil {
@@ -114,86 +116,21 @@ func (d *DirectoryScanner) ScanDirectory(ctx context.Context, dir string, secret
 			secrets = append(secrets, fileSecrets...)
 		}
 		return nil
-}
-func init() {
-	additionalPatterns := AdditionalSecretPatterns()
-	secretPatterns = append(secretPatterns, additionalPatterns...)
-}
-func main() {
-	// Get the current working directory
-	dir, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Error getting current working directory:", err)
-		os.Exit(1)
-	}
-
-	// Get the secret patterns
-	compiledSecretPatterns := getSecretPatterns()
-
-	// Use a buffered channel to limit the number of goroutines being created
-	jobs := make(chan string, 100)
-	results := make(chan []Secret, 1000)
-
-	// Create the worker pool
-	numWorkers := runtime.NumCPU()
-	var wg sync.WaitGroup
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for job := range jobs {
-				secrets, err := scanFileForSecrets(job, compiledSecretPatterns)
-				if err != nil {
-					fmt.Println("Error scanning file:", err)
-				}
-				results <- secrets
-			}
-		}()
-	}
-
-	// Add the jobs to the channel
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && !shouldIgnore(path) {
-			jobs <- path
-		}
-		return nil
 	})
 	if err != nil {
-		fmt.Println("Error walking the directory:", err)
+		return secrets, err
 	}
-
-	// Close the jobs channel and wait for all the workers to finish
-	close(jobs)
-	wg.Wait()
-
-	// Close the results channel
-	close(results)
-
-	// Merge the results
-	var secretsFound []Secret
-	for secrets := range results {
-		secretsFound = append(secretsFound, secrets...)
-	}
-
-	// Print the results
-	if len(secretsFound) > 0 {
-		fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
-		fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
-		for _, secret := range secretsFound {
-			fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sLine:%s %s\n%sPattern:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Line, YellowColor, ResetColor, secret.Pattern)
-		}
-		fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
-		fmt.Printf("%s%d secrets found. Please review and remove them before committing your code.%s\n", RedColor, len(secretsFound), ResetColor)
-		os.Exit(1) // Exit with a non-zero exit code, indicating a failure
-	} else {
-		fmt.Printf("%sNo secrets found.%s\n", GreenColor, ResetColor)
-	}
+	return secrets, nil
 }
 
-
+func (d *DirectoryScanner) shouldIgnore(path string) bool {
+	for _, pattern := range d.ignorePatterns {
+		if pattern.MatchString(path) {
+			return true
+		}
+	}
+	return false
+}
 func shouldIgnore(path string) bool {
     ignorePatterns := []string{
         
