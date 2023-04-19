@@ -99,7 +99,7 @@ func main() {
 
 func shouldIgnore(path string) bool {
     ignorePatterns := []string{
-        `^\..*`,                // Hidden files/directories
+        
         `^vendor`,              // Vendor directories
         `^node_modules`,        // Node.js modules directory
         `^\.idea`,              // IntelliJ IDEA project directory
@@ -198,8 +198,6 @@ func AdditionalSecretPatterns() []string {
 		`(?i)s3\.amazonaws\.com/[\w\-\.]+`,
 		// Hardcoded IP addresses
 		`\b(?:\d{1,3}\.){3}\d{1,3}\b`,
-		// Hardcoded domains
-		`(?i)(?:http|https|ftp|sftp)://[^\s'"]+`,
 		// Basic Authentication credentials
 		`(?i)(?:http|https)://\w+:\w+@[\w\-\.]+`,
 		// JWT tokens
