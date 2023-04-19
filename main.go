@@ -22,6 +22,7 @@ type Secret struct {
 	File       string
 	LineNumber int
 	Line       string
+	Pattern    string
 }
 
 func main() {
@@ -40,20 +41,22 @@ func main() {
 	results := make(chan []Secret, 1000)
 
 	// Create the worker pool
-	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for job := range jobs {
-				secrets, err := scanFileForSecrets(job, secretPatterns)
-				if err != nil {
-					fmt.Println("Error scanning file:", err)
-				}
-				results <- secrets
+	numWorkers := runtime.NumCPU()
+        var wg sync.WaitGroup
+        for i := 0; i < numWorkers; i++ {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for job := range jobs {
+			secrets, err := scanFileForSecrets(job, secretPatterns)
+			if err != nil {
+				fmt.Println("Error scanning file:", err)
 			}
-		}()
-	}
+			results <- secrets
+		}
+	}()
+}
+
 
 	// Add the jobs to the channel
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -86,9 +89,9 @@ func main() {
 	if len(secretsFound) > 0 {
 		fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
 		fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
-		for _, secret := range secretsFound {
-			fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sLine Number:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Line)
-		}
+                for _, secret := range secretsFound {
+	        fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sLine:%s %s\n%sPattern:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Line, YellowColor, ResetColor, secret.Pattern)
+}
 		fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
 		fmt.Printf("%s%d secrets found. Please review and remove them before committing your code.%s\n", RedColor, len(secretsFound), ResetColor)
 		os.Exit(1) // Exit with a non-zero exit code, indicating a failure
@@ -171,7 +174,7 @@ func scanFileForSecrets(filePath string, secretPatterns []*regexp.Regexp) ([]Sec
 		line := scanner.Text()
 		for _, pattern := range secretPatterns {
 			if pattern.MatchString(line) {
-				secrets = append(secrets, Secret{filePath, lineNumber, line})
+				secrets = append(secrets, Secret{filePath, lineNumber, line, pattern.String()})
 			}
 		}
 		lineNumber++
@@ -181,7 +184,6 @@ func scanFileForSecrets(filePath string, secretPatterns []*regexp.Regexp) ([]Sec
 	}
 	return secrets, nil
 }
-
 
 func AdditionalSecretPatterns() []string {
 	vulnerabilityPatterns := []string{
