@@ -102,17 +102,19 @@ func main() {
 
 
 
-func NewSecretScanner(patterns []string) (*SecretScanner, error) {
-	compiledPatterns := make([]*regexp.Regexp, 0, len(patterns))
-	for _, pattern := range patterns {
-		compiledPattern, err := regexp.Compile(pattern)
-		if err != nil {
-			return nil, err
-		}
-		compiledPatterns = append(compiledPatterns, compiledPattern)
-	}
-	return &SecretScanner{patterns: compiledPatterns}, nil
+func NewSecretScanner() (*SecretScanner, error) {
+    allPatterns := append(secretPatterns, AdditionalSecretPatterns()...)
+    compiledPatterns := make([]*regexp.Regexp, 0, len(allPatterns))
+    for _, pattern := range allPatterns {
+        compiledPattern, err := regexp.Compile(pattern)
+        if err != nil {
+            return nil, err
+        }
+        compiledPatterns = append(compiledPatterns, compiledPattern)
+    }
+    return &SecretScanner{patterns: compiledPatterns}, nil
 }
+
 
 func (s *SecretScanner) FindSecrets(ctx context.Context, filePath string) ([]Secret, error) {
 	var secrets []Secret
