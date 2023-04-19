@@ -36,7 +36,7 @@ func main() {
 
 	// Use a buffered channel to limit the number of goroutines being created
 	jobs := make(chan string, 100)
-	results := make(chan []Secret, 100)
+	results := make(chan []Secret, 1000)
 
 	// Create the worker pool
 	var wg sync.WaitGroup
@@ -74,7 +74,7 @@ func main() {
 
 	// Merge the results
 	var secretsFound []Secret
-	for range results {
+	for i := 0; i < 10; i++ {
 		secrets := <-results
 		secretsFound = append(secretsFound, secrets...)
 	}
