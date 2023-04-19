@@ -86,45 +86,32 @@ for i := 0; i < numWorkers; i++ {
 	}
 	
 
-	// Add the jobs to the channel
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && !shouldIgnore(path) {
-			jobs <- path
-		}
-		return nil
-	})
-	if err != nil {
-		fmt.Println("Error walking the directory:", err)
-	}
+	 // Add the jobs to the channel
+    err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+        if err != nil {
+            return err
+        }
+        if !info.IsDir() && !shouldIgnore(path) {
+            jobs <- path
+        }
+        return nil
+    })
+    if err != nil {
+        fmt.Println("Error walking the directory:", err)
+    }
 
+    // Close the jobs channel and wait for all the workers to finish
+    close(jobs)
+    wg.Wait()
 
+    // Close the results channel
+    close(results)
 
-
-// Merge the results
-var secretsFound []Secret
-totalFilesProcessed := 0
-
-go func() {
+    // Merge the results
+    var secretsFound []Secret
     for secrets := range results {
         secretsFound = append(secretsFound, secrets...)
-        totalFilesProcessed++
-
-        if totalFilesProcessed == len(jobs) {
-            break
-        }
     }
-}()
-
-// Close the jobs channel and wait for all the workers to finish
-close(jobs)
-wg.Wait()
-close(results) // Close the results channel after all workers are done
-
-// Wait for results goroutine to finish
-time.Sleep(100 * time.Millisecond)
 
 	// Print the results
 	if len(secretsFound) > 0 {
