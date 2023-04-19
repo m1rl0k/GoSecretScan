@@ -69,7 +69,7 @@ func main() {
 	}
 
 	// Create the secret scanner
-	secretScanner, err := NewSecretScanner()
+	secretScanner, err := NewSecretScanner(secretPatterns)
 	if err != nil {
 		fmt.Println("Error creating secret scanner:", err)
 		return
