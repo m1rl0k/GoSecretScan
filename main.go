@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sync"
         "runtime"
+        "strings"
 )
 
 const (
@@ -57,7 +58,7 @@ func main() {
 	}
 
 	// Get the secret patterns
-	secretPatterns := getSecretPatterns()
+	compiledSecretPatterns := getSecretPatterns()
 
 	// Use a buffered channel to limit the number of goroutines being created
 	jobs := make(chan string, 100)
@@ -143,10 +144,7 @@ func shouldIgnore(path string) bool {
 }
 
 func getSecretPatterns() []*regexp.Regexp {
-	defaultPatterns := []string{
-
-	}
-	patterns := append(defaultPatterns, AdditionalSecretPatterns()...)
+	patterns := AdditionalSecretPatterns()
 	var compiledPatterns []*regexp.Regexp
 	for _, pattern := range patterns {
 		compiledPattern, err := regexp.Compile(pattern)
