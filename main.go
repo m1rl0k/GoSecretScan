@@ -131,27 +131,7 @@ func (d *DirectoryScanner) shouldIgnore(path string) bool {
 	}
 	return false
 }
-func shouldIgnore(path string) bool {
-    ignorePatterns := []string{
-        
-        `^node_modules`,        // Node.js modules directory
-        `^\.idea`,              // IntelliJ IDEA project directory
-        `^\.vscode`,            // Visual Studio Code project directory
-        `\.out$`,               // Binary files
-        `\.min\.js$`,           // Minified JavaScript files
-        `\.min\.css$`,          // Minified CSS files
-        `\.(jpg|jpeg|png|gif|ico)$`,    // Images
-    }
 
-    for _, pattern := range ignorePatterns {
-        re := regexp.MustCompile(pattern)
-        if re.MatchString(path) {
-            return true
-        }
-    }
-
-    return false
-}
 
 func getSecretPatterns() []*regexp.Regexp {
 	patterns := AdditionalSecretPatterns()
