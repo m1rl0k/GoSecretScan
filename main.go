@@ -100,9 +100,7 @@ for i := 0; i < numWorkers; i++ {
 		fmt.Println("Error walking the directory:", err)
 	}
 
-	// Close the jobs channel and wait for all the workers to finish
-	close(jobs)
-	wg.Wait()
+
 
 
 // Merge the results
