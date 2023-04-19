@@ -66,26 +66,22 @@ func main() {
 	jobs := make(chan string, 100)
 	results := make(chan []Secret, 1000)
 
-	// Create the worker pool
+// Create the worker pool
 numWorkers := runtime.NumCPU()
-	var wg sync.WaitGroup
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for job := range jobs {
-				secrets, err := scanFileForSecrets(job, compiledSecretPatterns)
-				if err != nil {
-					fmt.Println("Error scanning file:", err)
-				}
-				if len(secrets) > 0 {
-    results <- secrets
-} else {
-    results <- []Secret{}
-}
+var wg sync.WaitGroup
+for i := 0; i < numWorkers; i++ {
+    wg.Add(1)
+    go func() {
+        defer wg.Done()
+        for job := range jobs {
+            secrets, err := scanFileForSecrets(job, compiledSecretPatterns)
+            if err != nil {
+                fmt.Println("Error scanning file:", err)
+            }
+            results <- secrets
+        }
+    }()
 
-			}
-		}()
 	}
 	
 
@@ -109,14 +105,16 @@ numWorkers := runtime.NumCPU()
 
 // Merge the results
 var secretsFound []Secret
-totalFilesProcessed := 0
-for secrets := range results {
-    secretsFound = append(secretsFound, secrets...)
-    totalFilesProcessed++
-    if totalFilesProcessed == numWorkers {
-        break
+go func() {
+    for secrets := range results {
+        secretsFound = append(secretsFound, secrets...)
     }
-}
+}()
+
+// Close the jobs channel and wait for all the workers to finish
+close(jobs)
+wg.Wait()
+close(results) // Close the results channel after all workers are done
 
 
 
