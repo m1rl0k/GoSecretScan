@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync"
-        
+        "runtime"
 )
 
 const (
@@ -42,21 +42,20 @@ func main() {
 
 	// Create the worker pool
 	numWorkers := runtime.NumCPU()
-        var wg sync.WaitGroup
-        for i := 0; i < numWorkers; i++ {
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for job := range jobs {
-			secrets, err := scanFileForSecrets(job, secretPatterns)
-			if err != nil {
-				fmt.Println("Error scanning file:", err)
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				secrets, err := scanFileForSecrets(job, secretPatterns)
+				if err != nil {
+					fmt.Println("Error scanning file:", err)
+				}
+				results <- secrets
 			}
-			results <- secrets
-		}
-	}()
-}
-
+		}()
+	}
 
 	// Add the jobs to the channel
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -66,8 +65,6 @@ func main() {
 		if !info.IsDir() && !shouldIgnore(path) {
 			jobs <- path
 		}
-
-
 		return nil
 	})
 	if err != nil {
@@ -80,7 +77,7 @@ func main() {
 
 	// Merge the results
 	var secretsFound []Secret
-	for i := 0; i < 10; i++ {
+	for i := 0; i < numWorkers; i++ {
 		secrets := <-results
 		secretsFound = append(secretsFound, secrets...)
 	}
@@ -89,9 +86,9 @@ func main() {
 	if len(secretsFound) > 0 {
 		fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
 		fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
-                for _, secret := range secretsFound {
-	        fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sLine:%s %s\n%sPattern:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Line, YellowColor, ResetColor, secret.Pattern)
-}
+		for _, secret := range secretsFound {
+			fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sLine:%s %s\n%sPattern:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Line, YellowColor, ResetColor, secret.Pattern)
+		}
 		fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
 		fmt.Printf("%s%d secrets found. Please review and remove them before committing your code.%s\n", RedColor, len(secretsFound), ResetColor)
 		os.Exit(1) // Exit with a non-zero exit code, indicating a failure
