@@ -2,23 +2,18 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sync"
-        "runtime"
-        
-        
 )
 
-const (
-	ResetColor    = "\033[0m"
-	RedColor      = "\033[31m"
-	GreenColor    = "\033[32m"
-	YellowColor   = "\033[33m"
-	SeparatorLine = "------------------------------------------------------------------------"
-)
+type SecretFinder interface {
+	FindSecrets(context.Context, string) ([]Secret, error)
+}
 
 type Secret struct {
 	File       string
@@ -48,6 +43,78 @@ var secretPatterns = []string{
 	`(?i)token_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/token)"`,
 	`(?i)auth_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/auth)"`,
 }
+
+type SecretScanner struct {
+	patterns []*regexp.Regexp
+}
+
+func NewSecretScanner(patterns []string) (*SecretScanner, error) {
+	var compiledPatterns []*regexp.Regexp
+	for _, pattern := range patterns {
+		compiledPattern, err := regexp.Compile(pattern)
+		if err != nil {
+			return nil, err
+		}
+		compiledPatterns = append(compiledPatterns, compiledPattern)
+	}
+	return &SecretScanner{patterns: compiledPatterns}, nil
+}
+
+func (s *SecretScanner) FindSecrets(ctx context.Context, filePath string) ([]Secret, error) {
+	var secrets []Secret
+	file, err := os.Open(filePath)
+	if err != nil {
+		return secrets, err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	lineNumber := 1
+	for scanner.Scan() {
+		line := scanner.Text()
+		for _, pattern := range s.patterns {
+			if pattern.MatchString(line) {
+				secrets = append(secrets, Secret{filePath, lineNumber, line, pattern.String()})
+			}
+		}
+		lineNumber++
+	}
+	if err := scanner.Err(); err != nil {
+		return secrets, err
+	}
+	return secrets, nil
+}
+
+type DirectoryScanner struct {
+	ignorePatterns []*regexp.Regexp
+}
+
+func NewDirectoryScanner(ignorePatterns []string) (*DirectoryScanner, error) {
+	var compiledPatterns []*regexp.Regexp
+	for _, pattern := range ignorePatterns {
+		compiledPattern, err := regexp.Compile(pattern)
+		if err != nil {
+			return nil, err
+		}
+		compiledPatterns = append(compiledPatterns, compiledPattern)
+	}
+	return &DirectoryScanner{ignorePatterns: compiledPatterns}, nil
+}
+
+func (d *DirectoryScanner) ScanDirectory(ctx context.Context, dir string, secretFinder SecretFinder) ([]Secret, error) {
+	var secrets []Secret
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && !d.shouldIgnore(path) {
+			fileSecrets, err := secretFinder.FindSecrets(ctx, path)
+			if err != nil {
+				return err
+			}
+			secrets = append(secrets, fileSecrets...)
+		}
+		return nil
+}
 func init() {
 	additionalPatterns := AdditionalSecretPatterns()
 	secretPatterns = append(secretPatterns, additionalPatterns...)
@@ -67,51 +134,49 @@ func main() {
 	jobs := make(chan string, 100)
 	results := make(chan []Secret, 1000)
 
-// Create the worker pool
-numWorkers := runtime.NumCPU()
-var wg sync.WaitGroup
-for i := 0; i < numWorkers; i++ {
-    wg.Add(1)
-    go func() {
-        defer wg.Done()
-        for job := range jobs {
-            secrets, err := scanFileForSecrets(job, compiledSecretPatterns)
-            if err != nil {
-                fmt.Println("Error scanning file:", err)
-            }
-            results <- secrets
-        }
-    }()
-
+	// Create the worker pool
+	numWorkers := runtime.NumCPU()
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				secrets, err := scanFileForSecrets(job, compiledSecretPatterns)
+				if err != nil {
+					fmt.Println("Error scanning file:", err)
+				}
+				results <- secrets
+			}
+		}()
 	}
-	
 
-	 // Add the jobs to the channel
-    err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-        if err != nil {
-            return err
-        }
-        if !info.IsDir() && !shouldIgnore(path) {
-            jobs <- path
-        }
-        return nil
-    })
-    if err != nil {
-        fmt.Println("Error walking the directory:", err)
-    }
+	// Add the jobs to the channel
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && !shouldIgnore(path) {
+			jobs <- path
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Println("Error walking the directory:", err)
+	}
 
-    // Close the jobs channel and wait for all the workers to finish
-    close(jobs)
-    wg.Wait()
+	// Close the jobs channel and wait for all the workers to finish
+	close(jobs)
+	wg.Wait()
 
-    // Close the results channel
-    close(results)
+	// Close the results channel
+	close(results)
 
-    // Merge the results
-    var secretsFound []Secret
-    for secrets := range results {
-        secretsFound = append(secretsFound, secrets...)
-    }
+	// Merge the results
+	var secretsFound []Secret
+	for secrets := range results {
+		secretsFound = append(secretsFound, secrets...)
+	}
 
 	// Print the results
 	if len(secretsFound) > 0 {
@@ -127,6 +192,7 @@ for i := 0; i < numWorkers; i++ {
 		fmt.Printf("%sNo secrets found.%s\n", GreenColor, ResetColor)
 	}
 }
+
 
 func shouldIgnore(path string) bool {
     ignorePatterns := []string{
