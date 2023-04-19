@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"sync"
         "runtime"
-        "strings"
+        
 )
 
 const (
@@ -65,14 +65,14 @@ func main() {
 	results := make(chan []Secret, 1000)
 
 	// Create the worker pool
-	numWorkers := runtime.NumCPU()
+numWorkers := runtime.NumCPU()
 	var wg sync.WaitGroup
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for job := range jobs {
-				secrets, err := scanFileForSecrets(job, secretPatterns)
+				secrets, err := scanFileForSecrets(job, compiledSecretPatterns)
 				if err != nil {
 					fmt.Println("Error scanning file:", err)
 				}
@@ -80,6 +80,7 @@ func main() {
 			}
 		}()
 	}
+	
 
 	// Add the jobs to the channel
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
