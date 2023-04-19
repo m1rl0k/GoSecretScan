@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync"
+        "strconv"
 )
 
 const (
@@ -213,4 +214,23 @@ func AdditionalSecretPatterns() []string {
 	}
 	return vulnerabilityPatterns
 }
+func processFiles(jobs <-chan string, results chan<- []Secret, secretPatterns []*regexp.Regexp) {
+    for job := range jobs {
+        secrets, err := scanFileForSecrets(job, secretPatterns)
+        if err != nil {
+            fmt.Println("Error scanning file:", err)
+        }
+        var secretsFound []Secret
+        for _, secret := range secrets {
+            secretsFound = append(secretsFound, Secret{
+                File:       secret["file"],
+                LineNumber: secret["line_number"],
+                Line:       secret["line"],
+                Pattern:    secret["pattern"],
+            })
+        }
+        results <- secretsFound
+    }
+}
+
 
