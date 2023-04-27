@@ -59,8 +59,13 @@ func init() {
 }
 
 func main() {
-	flag.BoolVar(&verbose, "verbose", false, "Enable verbose output")
-	flag.Parse()
+	verbose := false
+	args := os.Args[1:]
+	if len(args) > 0 && args[0] == "--verbose" {
+		verbose = true
+	}
+
+	setVerbose(verbose)
 
 	dir, err := os.Getwd()
 	if err != nil {
@@ -68,7 +73,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	secretsFound, scannedFiles, ignoredFiles := findSecretsInDirectory(dir)
+	secretsFound := findSecretsInDirectory(dir)
 
 	if len(secretsFound) > 0 {
 		displayFoundSecrets(secretsFound)
@@ -76,8 +81,6 @@ func main() {
 	} else {
 		fmt.Printf("%sNo secrets found.%s\n", GreenColor, ResetColor)
 	}
-
-	displaySummary(scannedFiles, ignoredFiles)
 }
 
 func logVerbose(message string) {
