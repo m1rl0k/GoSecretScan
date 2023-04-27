@@ -222,6 +222,11 @@ func shouldIgnore(path string) bool {
 		return true
 	}
 
+	// Ignore the binary file
+	if filepath.Base(path) == "secret_scanner" {
+		return true
+	}
+
 	return false
 }
 
