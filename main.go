@@ -54,6 +54,7 @@ type Secret struct {
 }
 
 func init() {
+	flag.BoolVar(&verbose, "verbose", false, "Display verbose output")
 	additionalPatterns := AdditionalSecretPatterns()
 	secretPatterns = append(secretPatterns, additionalPatterns...)
 }
