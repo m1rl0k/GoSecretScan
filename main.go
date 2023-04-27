@@ -2,19 +2,25 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
-        "time"
-
+	"sync"
+	"strings"
+       “flag”
 )
 
-type SecretFinder interface {
-	FindSecrets(context.Context, string) ([]Secret, error)
-}
+const (
+	ResetColor    = "\033[0m"
+	RedColor      = "\033[31m"
+	GreenColor    = "\033[32m"
+	YellowColor   = "\033[33m"
+	SeparatorLine = "------------------------------------------------------------------------"
+)
+
 var secretPatterns = []string{
+
         `(?i)aws_access_key_id\s*=\s*"?AKIA[0-9A-Z]{16}"?`,
         `(?i)aws_secret_access_key\s*=\s*"?[0-9a-zA-Z/+]{40}"?`,
 	`(?i)aws_access_key_id\s*=\s*"AKIA[0-9A-Z]{16}"`,
@@ -35,222 +41,173 @@ var secretPatterns = []string{
 	`(?i)client_x509_cert_url\s*=\s*"(https://[a-z0-9\-]+\.googleusercontent\.com/[^"']{1,200})"`,
 	`(?i)token_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/token)"`,
 	`(?i)auth_uri\s*=\s*"(https://(?:accounts\.)?google\.com/o/oauth2/auth)"`,
+
 }
+
+var verbose bool
+
 type Secret struct {
 	File       string
 	LineNumber int
 	Line       string
-	Pattern    string
+	Type       string
 }
 
-type SecretScanner struct {
-	patterns []*regexp.Regexp
+func init() {
+	additionalPatterns := AdditionalSecretPatterns()
+	secretPatterns = append(secretPatterns, additionalPatterns...)
 }
+
 func main() {
-	// Define the directory to scan
-	dir := "."
+	flag.BoolVar(&verbose, "verbose", false, "Enable verbose output")
+	flag.Parse()
 
-	// Create the ignore patterns for the directory scanner
-	ignorePatterns := []string{
-		`^node_modules`,        // Node.js modules directory
-		`^\.idea`,              // IntelliJ IDEA project directory
-		`^\.vscode`,            // Visual Studio Code project directory
-		`\.out$`,               // Binary files
-		`\.min\.js$`,           // Minified JavaScript files
-		`\.min\.css$`,          // Minified CSS files
-		`\.(jpg|jpeg|png|gif|ico)$`,    // Images
-	}
-
-	// Create the directory scanner
-	dirScanner, err := NewDirectoryScanner(ignorePatterns)
+	dir, err := os.Getwd()
 	if err != nil {
-		fmt.Println("Error creating directory scanner:", err)
-		return
+		fmt.Println("Error getting current working directory:", err)
+		os.Exit(1)
 	}
 
-	// Create the secret scanner
-	secretScanner, err := NewSecretScanner()
-	if err != nil {
-		fmt.Println("Error creating secret scanner:", err)
-		return
+	secretsFound, scannedFiles, ignoredFiles := findSecretsInDirectory(dir)
+
+	if len(secretsFound) > 0 {
+		displayFoundSecrets(secretsFound)
+		os.Exit(1)
+	} else {
+		fmt.Printf("%sNo secrets found.%s\n", GreenColor, ResetColor)
 	}
 
-	// Start the timer
-	start := time.Now()
-
-	// Scan the directory for secrets concurrently
-	secretsChan := make(chan []Secret)
-	go func() {
-		secrets, err := dirScanner.ScanDirectory(context.Background(), dir, secretScanner)
-		if err != nil {
-			fmt.Println("Error scanning directory:", err)
-			return
-		}
-		secretsChan <- secrets
-	}()
-
-	// Wait for the results and print the found secrets
-	secrets := <-secretsChan
-	for _, secret := range secrets {
-		fmt.Printf("%s:%d: %s\n", secret.File, secret.LineNumber, secret.Line)
-	}
-
-	// Calculate and print the elapsed time
-	elapsed := time.Since(start)
-	fmt.Printf("Scanning took %s\n", elapsed)
+	displaySummary(scannedFiles, ignoredFiles)
 }
 
-
-
-func NewSecretScanner() (*SecretScanner, error) {
-    allPatterns := append(secretPatterns, AdditionalSecretPatterns()...)
-    compiledPatterns := make([]*regexp.Regexp, 0, len(allPatterns))
-    for _, pattern := range allPatterns {
-        compiledPattern, err := regexp.Compile(pattern)
-        if err != nil {
-            return nil, err
-        }
-        compiledPatterns = append(compiledPatterns, compiledPattern)
+func logVerbose(message string) {
+    if verbose {
+        fmt.Println(message)
     }
-    return &SecretScanner{patterns: compiledPatterns}, nil
 }
 
+func findSecretsInDirectory(dir string) ([]Secret, int, int) {
+	var secretsFound []Secret
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var scannedFiles, ignoredFiles int
 
-func (s *SecretScanner) FindSecrets(ctx context.Context, filePath string) ([]Secret, error) {
-	var secrets []Secret
-	file, err := os.Open(filePath)
-	if err != nil {
-		return secrets, err
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	lineNumber := 1
-	for scanner.Scan() {
-		line := scanner.Text()
-		for _, pattern := range s.patterns {
-			if pattern.MatchString(line) {
-				secrets = append(secrets, Secret{filePath, lineNumber, line, pattern.String()})
-			}
-		}
-		lineNumber++
-	}
-	if err := scanner.Err(); err != nil {
-		return secrets, err
-	}
-	return secrets, nil
-}
-
-type DirectoryScanner struct {
-	ignorePatterns []*regexp.Regexp
-}
-
-func NewDirectoryScanner(ignorePatterns []string) (*DirectoryScanner, error) {
-	compiledPatterns := make([]*regexp.Regexp, 0, len(ignorePatterns))
-	for _, pattern := range ignorePatterns {
-		compiledPattern, err := regexp.Compile(pattern)
-		if err != nil {
-			return nil, err
-		}
-		compiledPatterns = append(compiledPatterns, compiledPattern)
-	}
-	return &DirectoryScanner{ignorePatterns: compiledPatterns}, nil
-}
-
-func (d *DirectoryScanner) ScanDirectory(ctx context.Context, dir string, secretFinder SecretFinder) ([]Secret, error) {
-	var secrets []Secret
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && !d.shouldIgnore(path) {
-			fileSecrets, err := secretFinder.FindSecrets(ctx, path)
-			if err != nil {
-				return err
+		if !info.IsDir() {
+			if shouldIgnore(path) {
+				ignoredFiles++
+			} else {
+				wg.Add(1)
+				go func(p string) {
+					defer wg.Done()
+					secrets, err := scanFileForSecrets(p)
+					if err != nil {
+						fmt.Printf("Error scanning file %s: %v\n", p, err)
+						return
+					}
+					mu.Lock()
+					secretsFound = append(secretsFound, secrets...)
+					mu.Unlock()
+				}(path)
+				scannedFiles++
 			}
-			secrets = append(secrets, fileSecrets...)
 		}
 		return nil
 	})
+
 	if err != nil {
-		return secrets, err
+		fmt.Println("Error walking the directory:", err)
+		os.Exit(1)
 	}
-	return secrets, nil
+
+	wg.Wait()
+	return secretsFound, scannedFiles, ignoredFiles
 }
 
-func (d *DirectoryScanner) shouldIgnore(path string) bool {
-	for _, pattern := range d.ignorePatterns {
-		if pattern.MatchString(path) {
-			return true
-		}
+func displayFoundSecrets(secretsFound []Secret) {
+	fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
+	fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
+	for _, secret := range secretsFound {
+		fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, secret.Line)
 	}
-	return false
+	fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
+	fmt.Printf("%s%d secrets found. Please review and remove them before committing your code.%s\n", RedColor, len(secretsFound), ResetColor)
 }
 
+func scanFileForSecrets(path string) ([]Secret, error) {
+	logVerbose(fmt.Sprintf("Scanning file: %s", path))
 
-func getSecretPatterns() []*regexp.Regexp {
-	patterns := AdditionalSecretPatterns()
-	var compiledPatterns []*regexp.Regexp
-	for _, pattern := range patterns {
-		compiledPattern, err := regexp.Compile(pattern)
-		if err != nil {
-			fmt.Println("Error compiling pattern:", err)
-			os.Exit(1)
-		}
-		compiledPatterns = append(compiledPatterns, compiledPattern)
-	}
-	return compiledPatterns
-}
-
-func scanFileForSecrets(filePath string, secretPatterns []*regexp.Regexp) ([]Secret, error) {
-	var secrets []Secret
-	file, err := os.Open(filePath)
+	file, err := os.Open(path)
 	if err != nil {
-		return secrets, err
+		return nil, err
 	}
 	defer file.Close()
+
 	scanner := bufio.NewScanner(file)
 	lineNumber := 1
+	var secrets []Secret
+
 	for scanner.Scan() {
 		line := scanner.Text()
-		for _, pattern := range secretPatterns {
-			if pattern.MatchString(line) {
-				secrets = append(secrets, Secret{filePath, lineNumber, line, pattern.String()})
+		for index, pattern := range secretPatterns {
+			re := regexp.MustCompile(pattern)
+			match := re.FindStringSubmatch(line)
+			if len(match) > 0 {
+				secretType := "Secret"
+				if index < len(secretTypes) {
+					secretType = secretTypes[index]
+				}
+				secret := Secret{
+					File:       path,
+					LineNumber: lineNumber,
+					Line:       line,
+					Type:       secretType,
+				}
+				secrets = append(secrets, secret)
 			}
 		}
 		lineNumber++
 	}
 	if err := scanner.Err(); err != nil {
-		return secrets, err
+		return nil, err
 	}
+
 	return secrets, nil
 }
 
-func AdditionalSecretPatterns() []string {
-	vulnerabilityPatterns := []string{
-		// Add your additional regex patterns here
-		`(?i)(<\s*script\b[^>]*>(.*?)<\s*/\s*script\s*>)`, // Cross-site scripting (XSS)
-		`(?i)(\b(?:or|and)\b\s*[\w-]*\s*=\s*[\w-]*\s*\b(?:or|and)\b\s*[^\s]+)`, // SQL injection
-		`(?i)(['"\s]exec(?:ute)?\s*[(\s]*\s*@\w+\s*)`, // SQL injection (EXEC, EXECUTE)
-		`(?i)(['"\s]union\s*all\s*select\s*[\w\s,]+(?:from|into|where)\s*\w+)`, // SQL injection (UNION ALL SELECT)
-		`(?i)example_pattern_1\s*=\s*"([a-zA-Z0-9\-]+\.example)"`,
-		`(?i)example_pattern_2\s*=\s*"([0-9]{12}-[a-zA-Z0-9_]{32})"`,
-		// Private SSH keys
-		`-----BEGIN\sRSA\sPRIVATE\sKEY-----[\s\S]+-----END\sRSA\sPRIVATE\sKEY-----`,
-		// S3 Bucket URLs
-		`(?i)s3\.amazonaws\.com/[\w\-\.]+`,
-		// Hardcoded IP addresses
-		`\b(?:\d{1,3}\.){3}\d{1,3}\b`,
-		// Basic Authentication credentials
-		`(?i)(?:http|https)://\w+:\w+@[\w\-\.]+`,
-		// JWT tokens
-		`(?i)ey(?:J[a-zA-Z0-9_-]+)[.](?:[a-zA-Z0-9_-]+)[.](?:[a-zA-Z0-9_-]+)`,
-		// Email addresses
-		`[\w.-]+@[\w.-]+\.\w+`,
-		// Connection strings (such as database connections)
-		`(?i)(?:Server|Host)=([\w.-]+);\s*(?:Port|Database|User\sID|Password)=([^;\s]+)(?:;\s(?:Port|Database|User\s*ID|Password)=([^;\s]+))*`,
+func shouldIgnore(path string) bool {
+	ignoreExtensions := []string{
+		".jpg", ".jpeg", ".png", ".gif", ".bmp", ".ico", ".zip", ".tar", ".gz", ".pdf", ".docx", ".xlsx", ".pptx", ".odt", ".ods", ".odp",
 	}
-	return vulnerabilityPatterns
+	ext := filepath.Ext(path)
+	for _, ignoreExt := range ignoreExtensions {
+		if strings.EqualFold(ignoreExt, ext) {
+			return true
+		}
+	}
+
+	// Ignore .git folder and other specific paths
+	ignoredPaths := []string{".git"}
+	for _, ignoredPath := range ignoredPaths {
+		if strings.Contains(path, ignoredPath) {
+			return true
+		}
+	}
+
+	return false
 }
 
+func AdditionalSecretPatterns() []string {
+	return []string{
+		// Add any additional patterns you want to include here
+	}
+}
 
-
+func displaySummary(scannedFiles, ignoredFiles int) {
+    fmt.Printf("%sSummary:%s\n", YellowColor, ResetColor)
+    fmt.Printf("Scanned Files: %d\n", scannedFiles)
+    fmt.Printf("Ignored Files: %d\n", ignoredFiles)
+}
