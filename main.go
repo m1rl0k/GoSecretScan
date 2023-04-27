@@ -79,11 +79,12 @@ func main() {
 	secretsFound, totalFiles, totalLines := findSecretsInDirectory(dir)
 
 	if len(secretsFound) > 0 {
-		displayFoundSecrets(secretsFound)
-		os.Exit(1)
-	} else {
-		fmt.Printf("%sNo secrets found.%s\n", GreenColor, ResetColor)
-	}
+	displayFoundSecrets(secretsFound, totalLines, totalFiles)
+	os.Exit(1)
+} else {
+	fmt.Printf("%sNo secrets found.%s\n", GreenColor, ResetColor)
+}
+
 
 	if verbose {
 		fmt.Printf("%s%d files scanned and %d total lines.%s\n", YellowColor, totalFiles, totalLines, ResetColor)
@@ -135,15 +136,16 @@ func findSecretsInDirectory(dir string) ([]Secret, int, int) {
 	return secretsFound, totalFiles, totalLines
 }
 
-func displayFoundSecrets(secretsFound []Secret) {
+func displayFoundSecrets(secretsFound []Secret, totalLines int, totalFiles int) {
 	fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
 	fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
 	for _, secret := range secretsFound {
 		fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, secret.Line)
 	}
 	fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
-	fmt.Printf("%s%d secrets found. Please review and remove them before committing your code.%s\n", RedColor, len(secretsFound), ResetColor)
+	fmt.Printf("%s%d secrets found in %d files and %d lines. Please review and remove them before committing your code.%s\n", RedColor, len(secretsFound), totalFiles, totalLines, ResetColor)
 }
+
 
 func scanFileForSecrets(path string) ([]Secret, int, error) {
 	file, err := os.Open(path)
