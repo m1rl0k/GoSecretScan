@@ -60,13 +60,7 @@ func init() {
 }
 
 func main() {
-	verbose := false
-	args := os.Args[1:]
-	if len(args) > 0 && args[0] == "--verbose" {
-		verbose = true
-	}
-
-	setVerbose(verbose)
+	flag.Parse()
 
 	dir, err := os.Getwd()
 	if err != nil {
@@ -74,13 +68,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	secretsFound := findSecretsInDirectory(dir)
+	secretsFound, totalFiles, totalLines := findSecretsInDirectory(dir)
 
 	if len(secretsFound) > 0 {
 		displayFoundSecrets(secretsFound)
 		os.Exit(1)
 	} else {
 		fmt.Printf("%sNo secrets found.%s\n", GreenColor, ResetColor)
+	}
+
+	if verbose {
+		fmt.Printf("%s%d files scanned and %d total lines.%s\n", YellowColor, totalFiles, totalLines, ResetColor)
 	}
 }
 
@@ -139,26 +137,29 @@ func displayFoundSecrets(secretsFound []Secret) {
 	fmt.Printf("%s%d secrets found. Please review and remove them before committing your code.%s\n", RedColor, len(secretsFound), ResetColor)
 }
 
-func scanFileForSecrets(path string) ([]Secret, error) {
-	logVerbose(fmt.Sprintf("Scanning file: %s", path))
-
+func scanFileForSecrets(path string) ([]Secret, int, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	lineNumber := 1
 	var secrets []Secret
+	lines := 0
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		for _, pattern := range secretPatterns {
+		lines++
+		for index, pattern := range secretPatterns {
 			re := regexp.MustCompile(pattern)
 			match := re.FindStringSubmatch(line)
 			if len(match) > 0 {
 				secretType := "Secret"
+				if index < len(secretTypes) {
+					secretType = secretTypes[index]
+				}
 				secret := Secret{
 					File:       path,
 					LineNumber: lineNumber,
@@ -171,11 +172,12 @@ func scanFileForSecrets(path string) ([]Secret, error) {
 		lineNumber++
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return nil, lines, err
 	}
 
-	return secrets, nil
+	return secrets, lines, nil
 }
+
 
 func shouldIgnore(path string) bool {
 	ignoreExtensions := []string{
