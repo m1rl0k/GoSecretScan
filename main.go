@@ -147,7 +147,7 @@ truncatedLine := secret.Line
 if len(truncatedLine) > 100 {
     truncatedLine = truncatedLine[:100] + "..."
 }
-}
+
 
 
 func scanFileForSecrets(path string) ([]Secret, int, error) {
