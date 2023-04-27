@@ -139,33 +139,25 @@ func findSecretsInDirectory(dir string) ([]Secret, int, int) {
 }
 
 func displayFoundSecrets(secretsFound []Secret, totalLines int, totalFiles int) {
-	fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
-	fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
+    fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
+    fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
+    for _, secret := range secretsFound {
+        truncatedLine := secret.Line
+        if len(truncatedLine) > 100 {
+            truncatedLine = truncatedLine[:100] + "..."
+        }
 
-	// Track the total number of matched secrets and unique patterns
-	matchedSecrets := 0
-	uniquePatterns := make(map[string]bool)
+        fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type)
 
-	for _, secret := range secretsFound {
-		truncatedLine := secret.Line
-		if len(truncatedLine) > 100 {
-			truncatedLine = truncatedLine[:100] + "..."
-		}
-		fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, truncatedLine)
-
-		// Increment the total number of matched secrets and add the pattern to the unique patterns map
-		matchedSecrets++
-		uniquePatterns[secret.Type] = true
-	}
-
-	// Display the total matched secrets and unique patterns
-	fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
-	fmt.Printf("%s%d secrets found in %d lines across %d files.%s\n", RedColor, matchedSecrets, totalLines, totalFiles, ResetColor)
-	fmt.Printf("%s%d unique patterns found.%s\n", RedColor, len(uniquePatterns), ResetColor)
+        if verbose {
+            fmt.Printf("%sMatched Secret Value:%s %s\n%sMatched Pattern:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.MatchedValue, YellowColor, ResetColor, secret.Pattern, YellowColor, ResetColor, truncatedLine)
+        } else {
+            fmt.Printf("\n")
+        }
+    }
+    fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
+    fmt.Printf("%s%d secrets found in %d lines across %d files. Please review and remove them before committing your code.%s\n", RedColor, len(secretsFound), totalLines, totalFiles, ResetColor)
 }
-
-
-
 
 
 func scanFileForSecrets(path string) ([]Secret, int, error) {
