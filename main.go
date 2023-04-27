@@ -154,6 +154,9 @@ func displayFoundSecrets(secretsFound []Secret, totalLines int, totalFiles int) 
 
 
 func scanFileForSecrets(path string) ([]Secret, int, error) {
+        if filepath.Base(path) == "main.go" {
+        return nil, 0, nil
+        }
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, 0, err
