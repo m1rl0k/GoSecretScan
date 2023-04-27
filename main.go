@@ -94,30 +94,28 @@ func findSecretsInDirectory(dir string) ([]Secret, int, int) {
 	var secretsFound []Secret
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	var scannedFiles, ignoredFiles int
+	var totalFiles int
+	var totalLines int
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() {
-			if shouldIgnore(path) {
-				ignoredFiles++
-			} else {
-				wg.Add(1)
-				go func(p string) {
-					defer wg.Done()
-					secrets, err := scanFileForSecrets(p)
-					if err != nil {
-						fmt.Printf("Error scanning file %s: %v\n", p, err)
-						return
-					}
-					mu.Lock()
-					secretsFound = append(secretsFound, secrets...)
-					mu.Unlock()
-				}(path)
-				scannedFiles++
-			}
+		if !info.IsDir() && !shouldIgnore(path) {
+			wg.Add(1)
+			go func(p string) {
+				defer wg.Done()
+				secrets, lines, err := scanFileForSecrets(p)
+				if err != nil {
+					fmt.Printf("Error scanning file %s: %v\n", p, err)
+					return
+				}
+				mu.Lock()
+				secretsFound = append(secretsFound, secrets...)
+				totalFiles++
+				totalLines += lines
+				mu.Unlock()
+			}(path)
 		}
 		return nil
 	})
@@ -128,7 +126,7 @@ func findSecretsInDirectory(dir string) ([]Secret, int, int) {
 	}
 
 	wg.Wait()
-	return secretsFound, scannedFiles, ignoredFiles
+	return secretsFound, totalFiles, totalLines
 }
 
 func displayFoundSecrets(secretsFound []Secret) {
