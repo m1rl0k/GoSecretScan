@@ -152,14 +152,11 @@ func scanFileForSecrets(path string) ([]Secret, error) {
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		for index, pattern := range secretPatterns {
+		for _, pattern := range secretPatterns {
 			re := regexp.MustCompile(pattern)
 			match := re.FindStringSubmatch(line)
 			if len(match) > 0 {
 				secretType := "Secret"
-				if index < len(secretTypes) {
-					secretType = secretTypes[index]
-				}
 				secret := Secret{
 					File:       path,
 					LineNumber: lineNumber,
