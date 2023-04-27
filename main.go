@@ -217,8 +217,14 @@ func shouldIgnore(path string) bool {
 		}
 	}
 
+	// Ignore the main.go file
+	if filepath.Base(path) == "main.go" {
+		return true
+	}
+
 	return false
 }
+
 
 func AdditionalSecretPatterns() []string {
 	return []string{
