@@ -46,6 +46,14 @@ var secretPatterns = []string{
 
 var verbose bool
 
+var secretTypes = []string{
+	"API Key",
+	"Access Token",
+	"Password",
+	// Add more secret types here as needed
+}
+
+
 type Secret struct {
 	File       string
 	LineNumber int
