@@ -140,10 +140,13 @@ func displayFoundSecrets(secretsFound []Secret, totalLines int, totalFiles int) 
 	fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
 	fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
 	for _, secret := range secretsFound {
-		fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, secret.Line)
-	}
-	fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
-	fmt.Printf("%s%d secrets found in %d files and %d lines. Please review and remove them before committing your code.%s\n", RedColor, len(secretsFound), totalFiles, totalLines, ResetColor)
+		fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, truncatedLine)
+
+
+truncatedLine := secret.Line
+if len(truncatedLine) > 100 {
+    truncatedLine = truncatedLine[:100] + "..."
+}
 }
 
 
