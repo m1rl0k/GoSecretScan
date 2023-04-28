@@ -92,8 +92,6 @@ func main() {
 }
 
 
-
-
 func logVerbose(message string) {
     if verbose {
         fmt.Println(message)
