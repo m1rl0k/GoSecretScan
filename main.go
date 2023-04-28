@@ -180,9 +180,9 @@ func displayFoundSecrets(secretsFound []Secret, totalLines int, totalFiles int) 
 
 
 func scanFileForSecrets(path string) ([]Secret, int, error) {
-        if filepath.Base(path) == "main.go" {
-        return nil, 0, nil
-        }
+	if filepath.Base(path) == "main.go" {
+		return nil, 0, nil
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, 0, err
@@ -214,6 +214,24 @@ func scanFileForSecrets(path string) ([]Secret, int, error) {
 				secrets = append(secrets, secret)
 			}
 		}
+
+		// Check for base64-encoded secrets
+		base64Matches := base64Regex.FindAllString(line, -1)
+		if len(base64Matches) > 0 {
+			for _, base64Match := range base64Matches {
+				decoded, err := base64.StdEncoding.DecodeString(base64Match)
+				if err == nil {
+					secret := Secret{
+						File:       path,
+						LineNumber: lineNumber,
+						Line:       base64Match,
+						Type:       "Base64-encoded secret",
+						Value:      string(decoded),
+					}
+					secrets = append(secrets, secret)
+				}
+			}
+		}
 		lineNumber++
 	}
 	if err := scanner.Err(); err != nil {
@@ -222,7 +240,6 @@ func scanFileForSecrets(path string) ([]Secret, int, error) {
 
 	return secrets, lines, nil
 }
-
 
 func shouldIgnore(path string) bool {
 	ignoreExtensions := []string{
