@@ -11,6 +11,8 @@ import (
         "flag"
 )
 
+const base64Regex = "(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
+
 const (
 	ResetColor    = "\033[0m"
 	RedColor      = "\033[31m"
@@ -183,6 +185,7 @@ func scanFileForSecrets(path string) ([]Secret, int, error) {
 	if filepath.Base(path) == "main.go" {
 		return nil, 0, nil
 	}
+
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, 0, err
@@ -198,7 +201,12 @@ func scanFileForSecrets(path string) ([]Secret, int, error) {
 		line := scanner.Text()
 		lines++
 		for index, pattern := range secretPatterns {
-			re := regexp.MustCompile(pattern)
+			var re *regexp.Regexp
+			if pattern == "base64" {
+				re = regexp.MustCompile(base64Regex)
+			} else {
+				re = regexp.MustCompile(pattern)
+			}
 			match := re.FindStringSubmatch(line)
 			if len(match) > 0 {
 				secretType := "Secret"
@@ -210,36 +218,21 @@ func scanFileForSecrets(path string) ([]Secret, int, error) {
 					LineNumber: lineNumber,
 					Line:       line,
 					Type:       secretType,
+					Value:      match[0],
 				}
 				secrets = append(secrets, secret)
 			}
 		}
-
-		// Check for base64-encoded secrets
-		base64Matches := base64Regex.FindAllString(line, -1)
-		if len(base64Matches) > 0 {
-			for _, base64Match := range base64Matches {
-				decoded, err := base64.StdEncoding.DecodeString(base64Match)
-				if err == nil {
-					secret := Secret{
-						File:       path,
-						LineNumber: lineNumber,
-						Line:       base64Match,
-						Type:       "Base64-encoded secret",
-						Value:      string(decoded),
-					}
-					secrets = append(secrets, secret)
-				}
-			}
-		}
 		lineNumber++
 	}
+
 	if err := scanner.Err(); err != nil {
 		return nil, lines, err
 	}
 
 	return secrets, lines, nil
 }
+
 
 func shouldIgnore(path string) bool {
 	ignoreExtensions := []string{
