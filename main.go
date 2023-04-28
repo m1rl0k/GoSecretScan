@@ -59,6 +59,7 @@ type Secret struct {
 	LineNumber int
 	Line       string
 	Type       string
+        Pattern    string
 }
 
 func init() {
