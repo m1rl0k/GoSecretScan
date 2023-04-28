@@ -23,10 +23,10 @@ const (
 
 
 var patterns = []SecretPattern{
-    {Type: "API Key", Regex: `(?i)AKIA[0-9A-Z]{16}`},
-    {Type: "Password", Regex: `(?i)password\s*[`=:\s]+\s*[\'"][^\'"]+[\'"]`},
-    {Type: "Access Token", Regex: `(?i)access[_-]?token\s*[`=:\s]+\s*[\'"][^\'"]+[\'"]`},
-    {Type: "Secret", Regex: `(?i)secret\s*[`=:\s]+\s*[\'"][^\'"]+[\'"]`},
+	{Type: "API Key", Regex: `(?i)AKIA[0-9A-Z]{16}`},
+	{Type: "Password", Regex: `(?i)password\s*[`=:\s]+\s*[\'"][^\'"]+[\'"]`},
+	{Type: "Access Token", Regex: `(?i)access[_-]?token\s*[`=:\s]+\s*[\'"][^\'"]+[\'"]`},
+	{Type: "Secret", Regex: `(?i)secret\s*[`=:\s]+\s*[\'"][^\'"]+[\'"]`, Pattern: ""}, // add a Pattern field
 }
 
 var secretPatterns = []string{
