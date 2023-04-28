@@ -137,6 +137,31 @@ func findSecretsInDirectory(dir string) ([]Secret, int, int) {
 	return secretsFound, totalFiles, totalLines
 }
 
+func findSecrets(file string, secretsFound *[]Secret) error {
+    data, err := ioutil.ReadFile(file)
+    if err != nil {
+        return err
+    }
+
+    for _, pattern := range patterns {
+        re := regexp.MustCompile(pattern.Regex)
+        matches := re.FindAllStringIndex(string(data), -1)
+        for _, m := range matches {
+            secret := Secret{
+                File:       file,
+                LineNumber: bytes.Count(data[:m[0]], []byte("\n")) + 1,
+                Type:       pattern.Type,
+                Pattern:    pattern.Pattern, // set the matched pattern
+            }
+            lines := bytes.Split(data[m[0]:m[1]], []byte("\n"))
+            secret.Line = strings.TrimSpace(string(lines[0]))
+            *secretsFound = append(*secretsFound, secret)
+        }
+    }
+
+    return nil
+}
+
 func displayFoundSecrets(secretsFound []Secret, totalLines int, totalFiles int) {
 	fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
 	fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
