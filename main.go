@@ -141,55 +141,45 @@ func findSecretsInDirectory(dir string) ([]Secret, int, int) {
 }
 
 func displayFoundSecrets(secretsFound []Secret, totalLines int, totalFiles int) {
-	if len(secretsFound) == 0 {
-		fmt.Printf("%sNo secrets found.%s\n", GreenColor, ResetColor)
-		return
-	}
+    if len(secretsFound) == 0 {
+        fmt.Printf("%sNo secrets found.%s\n", GreenColor, ResetColor)
+        return
+    }
 
-	fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
-	fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
+    fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
+    fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
 
-	secretTypesCount := make(map[string]int)
-	for _, secretType := range secretTypes {
-		secretTypesCount[secretType] = 0
-	}
+    secretTypesCount := make(map[string]int)
+    for _, secretType := range secretTypes {
+        secretTypesCount[secretType] = 0
+    }
 
-	for _, secret := range secretsFound {
-		secretType := secret.Type
-		secretTypesCount[secretType]++
-		truncatedLine := secret.Line
-		if len(truncatedLine) > 100 {
-			truncatedLine = truncatedLine[:100] + "..."
-		}
-		if secret.IsBase64Encoded() {
-			value, err := base64.StdEncoding.DecodeString(secret.Value)
-			if err == nil {
-				fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sLine:%s %s\n%sValue:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, truncatedLine, YellowColor, ResetColor, string(value))
-			} else {
-				fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sLine:%s %s\n%sValue:%s %s (invalid base64 encoding)\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, truncatedLine, YellowColor, ResetColor, secret.Value)
-			}
-		} else {
-			fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, truncatedLine)
-		}
-	}
-	fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
+    for _, secret := range secretsFound {
+        secretType := secret.Type
+        secretTypesCount[secretType]++
+        truncatedLine := secret.Line
+        if len(truncatedLine) > 100 {
+            truncatedLine = truncatedLine[:100] + "..."
+        }
+        fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, truncatedLine)
+    }
+    fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
 
-	totalSecretsFound := len(secretsFound)
-	for _, secretType := range secretTypes {
-		secretTypeCount := secretTypesCount[secretType]
-		if secretTypeCount > 0 {
-			fmt.Printf("%s%d %s found%s\n", RedColor, secretTypeCount, secretType, ResetColor)
-		}
-	}
+    totalSecretsFound := len(secretsFound)
+    for _, secretType := range secretTypes {
+        secretTypeCount := secretTypesCount[secretType]
+        if secretTypeCount > 0 {
+            fmt.Printf("%s%d %s found%s\n", RedColor, secretTypeCount, secretType, ResetColor)
+        }
+    }
+    
+    secretTypeCount := secretTypesCount["Secret"]
+    if secretTypeCount > 0 {
+        fmt.Printf("%s%d %s found%s\n", RedColor, secretTypeCount, "Secret", ResetColor)
+    }
 
-	secretTypeCount := secretTypesCount["Secret"]
-	if secretTypeCount > 0 {
-		fmt.Printf("%s%d %s found%s\n", RedColor, secretTypeCount, "Secret", ResetColor)
-	}
-
-	fmt.Printf("\n%s%d secrets found in %d lines across %d files. Please review and remove them before committing your code.%s\n", RedColor, totalSecretsFound, totalLines, totalFiles, ResetColor)
+    fmt.Printf("\n%s%d secrets found in %d lines across %d files. Please review and remove them before committing your code.%s\n", RedColor, totalSecretsFound, totalLines, totalFiles, ResetColor)
 }
-
 
 
 func scanFileForSecrets(path string) ([]Secret, int, error) {
