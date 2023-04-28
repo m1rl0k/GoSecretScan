@@ -9,6 +9,9 @@ import (
 	"sync"
 	"strings"
         "flag"
+        "ioutil"
+        "pattern"
+        "bytes"
 )
 
 const (
