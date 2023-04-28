@@ -9,8 +9,6 @@ import (
 	"sync"
 	"strings"
         "flag"
-        "io/ioutil"
-        "bytes"
 )
 
 const (
@@ -20,15 +18,6 @@ const (
 	YellowColor   = "\033[33m"
 	SeparatorLine = "------------------------------------------------------------------------"
 )
-
-
-var patterns = []SecretPattern{
-    {Type: "API Key", Regex: `(?i)AKIA[0-9A-Z]{16}`},
-    {Type: "Password", Regex: "(?i)password\\s*[`=:\\s]+\\s*[\\'\\\"][^\\'\\\"]+[\\'\\\"]"},
-    {Type: "Access Token", Regex: "(?i)access[_-]?token\\s*[`=:\\s]+\\s*[\\'\\\"][^\\'\\\"]+[\\'\\\"]"},
-    {Type: "Secret", Regex: "(?i)secret\\s*[`=:\\s]+\\s*[\\'\\\"][^\\'\\\"]+[\\'\\\"]", Pattern: ""}, // add a Pattern field
-}
-
 
 var secretPatterns = []string{
 
@@ -64,18 +53,12 @@ var secretTypes = []string{
 	// Add more secret types here as needed
 }
 
-type SecretPattern struct {
-    Type   string
-    Regex  string
-    Pattern string // add a Pattern field
-}
 
 type Secret struct {
 	File       string
 	LineNumber int
 	Line       string
 	Type       string
-        Pattern    string
 }
 
 func init() {
@@ -153,58 +136,21 @@ func findSecretsInDirectory(dir string) ([]Secret, int, int) {
 	return secretsFound, totalFiles, totalLines
 }
 
-func findSecrets(file string, secretsFound *[]Secret) error {
-    data, err := ioutil.ReadFile(file)
-    if err != nil {
-        return err
-    }
-
-    for _, pattern := range patterns {
-        re := regexp.MustCompile(pattern.Regex)
-        matches := re.FindAllStringIndex(string(data), -1)
-        for _, m := range matches {
-            secret := Secret{
-                File:       file,
-                LineNumber: bytes.Count(data[:m[0]], []byte("\n")) + 1,
-                Type:       pattern.Type,
-                Pattern:    pattern.Pattern, // set the matched pattern
-            }
-            lines := bytes.Split(data[m[0]:m[1]], []byte("\n"))
-            secret.Line = strings.TrimSpace(string(lines[0]))
-            *secretsFound = append(*secretsFound, secret)
-        }
-    }
-
-    return nil
-}
-
 func displayFoundSecrets(secretsFound []Secret, totalLines int, totalFiles int) {
 	fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
 	fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
-
-	patterns := make(map[string]int)
 	for _, secret := range secretsFound {
 		truncatedLine := secret.Line
 		if len(truncatedLine) > 100 {
 			truncatedLine = truncatedLine[:100] + "..."
 		}
-		fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sMatched Pattern:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, secret.Pattern, YellowColor, ResetColor, truncatedLine)
-		patterns[secret.Pattern]++
+		fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, truncatedLine)
 	}
-
 	fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
-	fmt.Printf("%s%d secrets found in %d lines across %d files.\n", RedColor, len(secretsFound), totalLines, totalFiles)
-	fmt.Printf("Total Unique Patterns Found: %d\n", len(patterns))
-
-	if len(patterns) > 0 {
-		fmt.Printf("%s\nPatterns and their frequency:\n", YellowColor)
-		for pattern, count := range patterns {
-			fmt.Printf("%s: %d\n", pattern, count)
-		}
-	}
-
-	fmt.Printf("%sPlease review and remove them before committing your code.%s\n", RedColor, ResetColor)
+	fmt.Printf("%s%d secrets found in %d lines across %d files. Please review and remove them before committing your code.%s\n", RedColor, len(secretsFound), totalLines, totalFiles, ResetColor)
 }
+
+
 
 
 func scanFileForSecrets(path string) ([]Secret, int, error) {
