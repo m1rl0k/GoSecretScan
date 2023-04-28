@@ -139,20 +139,31 @@ func findSecretsInDirectory(dir string) ([]Secret, int, int) {
 func displayFoundSecrets(secretsFound []Secret, totalLines int, totalFiles int) {
 	fmt.Printf("\n%s%s%s\n", YellowColor, SeparatorLine, ResetColor)
 	fmt.Printf("%sSecrets found:%s\n", RedColor, ResetColor)
-	uniquePatterns := make(map[string]int)
+
+	patterns := make(map[string]int)
 	for _, secret := range secretsFound {
 		truncatedLine := secret.Line
 		if len(truncatedLine) > 100 {
 			truncatedLine = truncatedLine[:100] + "..."
 		}
-		fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, truncatedLine)
-		uniquePatterns[secret.Type]++
+		fmt.Printf("%sFile:%s %s\n%sLine Number:%s %d\n%sType:%s %s\n%sMatched Pattern:%s %s\n%sLine:%s %s\n\n", YellowColor, ResetColor, secret.File, YellowColor, ResetColor, secret.LineNumber, YellowColor, ResetColor, secret.Type, YellowColor, ResetColor, secret.Pattern, YellowColor, ResetColor, truncatedLine)
+		patterns[secret.Pattern]++
 	}
+
 	fmt.Printf("%s%s\n", YellowColor, SeparatorLine)
-	fmt.Printf("%d secrets found in %d lines across %d files.\n", len(secretsFound), totalLines, totalFiles)
-	fmt.Printf("Total Unique Patterns Found: %d\n", len(uniquePatterns))
+	fmt.Printf("%s%d secrets found in %d lines across %d files.\n", RedColor, len(secretsFound), totalLines, totalFiles)
+	fmt.Printf("Total Unique Patterns Found: %d\n", len(patterns))
+
+	if len(patterns) > 0 {
+		fmt.Printf("%s\nPatterns and their frequency:\n", YellowColor)
+		for pattern, count := range patterns {
+			fmt.Printf("%s: %d\n", pattern, count)
+		}
+	}
+
 	fmt.Printf("%sPlease review and remove them before committing your code.%s\n", RedColor, ResetColor)
 }
+
 
 func scanFileForSecrets(path string) ([]Secret, int, error) {
         if filepath.Base(path) == "main.go" {
