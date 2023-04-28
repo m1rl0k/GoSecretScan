@@ -9,7 +9,7 @@ import (
 	"sync"
 	"strings"
         "flag"
-        "ioutil"
+        "io/ioutil"
         "pattern"
         "bytes"
 )
