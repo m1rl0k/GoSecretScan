@@ -86,10 +86,11 @@ func main() {
 	}
 
 	if verbose {
-		displaySummary(totalFiles, len(secretsFound))
 		fmt.Printf("%s%d files scanned and %d total lines.%s\n", YellowColor, totalFiles, totalLines, ResetColor)
+		displaySummary(totalFiles, len(secretsFound))
 	}
 }
+
 
 
 
