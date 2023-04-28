@@ -79,17 +79,18 @@ func main() {
 	secretsFound, totalFiles, totalLines := findSecretsInDirectory(dir)
 
 	if len(secretsFound) > 0 {
-	displayFoundSecrets(secretsFound, totalLines, totalFiles)
-	os.Exit(1)
-} else {
-	fmt.Printf("%sNo secrets found.%s\n", GreenColor, ResetColor)
-}
-
+		displayFoundSecrets(secretsFound, totalLines, totalFiles)
+		os.Exit(1)
+	} else {
+		fmt.Printf("%sNo secrets found.%s\n", GreenColor, ResetColor)
+	}
 
 	if verbose {
+		displaySummary(totalFiles, 0)
 		fmt.Printf("%s%d files scanned and %d total lines.%s\n", YellowColor, totalFiles, totalLines, ResetColor)
 	}
 }
+
 
 func logVerbose(message string) {
     if verbose {
