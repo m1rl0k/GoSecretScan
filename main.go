@@ -166,15 +166,17 @@ func displayFoundSecrets(secretsFound []Secret, totalLines int, totalFiles int) 
     for _, secretType := range secretTypes {
         secretTypeCount := secretTypesCount[secretType]
         if secretTypeCount > 0 {
-            fmt.Printf("%s%d %s%s found%s\n", RedColor, secretTypeCount, secretType, ResetColor, secretType)
+            fmt.Printf("%s%d %s found%s\n", RedColor, secretTypeCount, secretType, ResetColor)
         }
+    }
+    
+    secretTypeCount := secretTypesCount["Secret"]
+    if secretTypeCount > 0 {
+        fmt.Printf("%s%d %s found%s\n", RedColor, secretTypeCount, "Secret", ResetColor)
     }
 
     fmt.Printf("\n%s%d secrets found in %d lines across %d files. Please review and remove them before committing your code.%s\n", RedColor, totalSecretsFound, totalLines, totalFiles, ResetColor)
 }
-
-
-
 
 
 func scanFileForSecrets(path string) ([]Secret, int, error) {
