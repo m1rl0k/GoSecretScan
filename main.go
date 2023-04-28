@@ -10,7 +10,6 @@ import (
 	"strings"
         "flag"
         "io/ioutil"
-        "pattern"
         "bytes"
 )
 
@@ -21,6 +20,14 @@ const (
 	YellowColor   = "\033[33m"
 	SeparatorLine = "------------------------------------------------------------------------"
 )
+
+
+var patterns = []SecretPattern{
+    {Type: "API Key", Regex: `(?i)AKIA[0-9A-Z]{16}`},
+    {Type: "Password", Regex: `(?i)password\s*[`=:\s]+\s*[\'"][^\'"]+[\'"]`},
+    {Type: "Access Token", Regex: `(?i)access[_-]?token\s*[`=:\s]+\s*[\'"][^\'"]+[\'"]`},
+    {Type: "Secret", Regex: `(?i)secret\s*[`=:\s]+\s*[\'"][^\'"]+[\'"]`},
+}
 
 var secretPatterns = []string{
 
@@ -56,6 +63,11 @@ var secretTypes = []string{
 	// Add more secret types here as needed
 }
 
+type SecretPattern struct {
+    Type   string
+    Regex  string
+    Pattern string // add a Pattern field
+}
 
 type Secret struct {
 	File       string
